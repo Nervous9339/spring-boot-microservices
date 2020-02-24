@@ -1,28 +1,37 @@
 package ru.nothingtdh.photoapp.api.users.service;
 
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.convention.MatchingStrategies;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import ru.nothingtdh.photoapp.api.users.data.AlbumsServiceClient;
 import ru.nothingtdh.photoapp.api.users.data.UserEntity;
 import ru.nothingtdh.photoapp.api.users.data.UserRepository;
 import ru.nothingtdh.photoapp.api.users.shared.UserDto;
+import ru.nothingtdh.photoapp.api.users.ui.model.AlbumResponseModel;
 
+import java.util.List;
 import java.util.UUID;
 
 import static java.util.Collections.emptyList;
 
 @Service
-@RequiredArgsConstructor(onConstructor_ = @Autowired)
+@Slf4j
+@RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
     private final UserRepository usersRepository;
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
+    private final AlbumsServiceClient albumsServiceClient;
+    private final Environment environment;
 
     @Override
     public UserDto createUser(UserDto userDetails) {
@@ -66,7 +75,10 @@ public class UserServiceImpl implements UserService {
         UserEntity userEntity = usersRepository.findByUserId(userId);
         if (userEntity == null) throw new UsernameNotFoundException("User not found");
 
-        return new ModelMapper().map(userEntity, UserDto.class);
+        UserDto userDto = new ModelMapper().map(userEntity, UserDto.class);
+        List<AlbumResponseModel> albums = albumsServiceClient.getAlbums(userId);
+        userDto.setAlbums(albums);
+        return userDto;
     }
 }
 
